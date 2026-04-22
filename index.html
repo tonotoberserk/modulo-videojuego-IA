@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Aventura de Palabras</title>
+    <style>
+        /* ============================================
+           🎨 ESTILOS GENERALES - ESTILO VIDEOJUEGO
+           ============================================ */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        :root {
+            --color-bg: #1a1a2e;
+            --color-primary: #e94560;
+            --color-secondary: #0f3460;
+            --color-accent: #f5c542;
+            --color-success: #4ecca3;
+            --color-white: #ffffff;
+            --pixel-font: 'Press Start 2P', cursive;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+        body {
+            background: var(--color-bg);
+            font-family: var(--pixel-font);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stars {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+        }
+        .star {
+            position: absolute; background: white; border-radius: 50%;
+            animation: twinkle 2s infinite alternate;
+        }
+        @keyframes twinkle {
+            0% { opacity: 0.2; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.3); }
+        }
+
+        #game-container {
+            position: relative; z-index: 1; width: 900px; max-width: 95vw;
+            background: linear-gradient(180deg, #16213e 0%, #1a1a2e 100%);
+            border: 4px solid var(--color-accent); border-radius: 20px;
+            box-shadow: 0 0 30px rgba(245, 197, 66, 0.3), inset 0 0 60px rgba(0,0,0,0.5);
+            overflow: hidden; min-height: 600px;
+        }
+
+        .hud {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; background: linear-gradient(180deg, #0f3460 0%, #16213e 100%);
+            border-bottom: 3px solid var(--color-accent);
+        }
+        .hud-item { display: flex; align-items: center; gap: 8px; color: var(--color-white); font-size: 12px; }
+        .hud-item .icon { font-size: 20px; }
+        .lives { display: flex; gap: 5px; }
+        .heart { font-size: 22px; transition: all 0.3s; }
+        .heart.lost { filter: grayscale(1); opacity: 0.3; transform: scale(0.8); }
+
+        .xp-bar-container {
+            width: 150px; height: 16px; background: #0a0a1a;
+            border-radius: 10px; border: 2px solid var(--color-accent); overflow: hidden;
+        }
+        .xp-bar-fill {
+            height: 100%; background: linear-gradient(90deg, var(--color-success), #7bed9f);
+            border-radius: 10px; transition: width 0.5s ease;
+            box-shadow: 0 0 10px var(--color-success);
+        }
+
+        .screen {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            padding: 30px; min-height: 520px; animation: fadeIn 0.5s ease;
+        }
+        .screen.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .game-title {
+            font-size: 32px; color: var(--color-accent);
+            text-shadow: 3px 3px 0 var(--color-primary), 6px 6px 0 rgba(0,0,0,0.3);
+            margin-bottom: 10px; text-align: center; animation: bounceTitle 2s infinite; line-height: 1.4;
+        }
+        @keyframes bounceTitle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .game-subtitle { font-size: 11px; color: #aaa; margin-bottom: 40px; text-align: center; }
+
+        .mascot { width: 150px; height: 150px; margin-bottom: 30px; animation: mascotFloat 3s ease-in-out infinite; }
+        .mascot img { width: 100%; height: 100%; object-fit: contain; }
+        @keyframes mascotFloat {
+            0%, 100% { transform: translateY(0) rotate(-3deg); }
+            50% { transform: translateY(-15px) rotate(3deg); }
+        }
+
+        .btn-game {
+            font-family: var(--pixel-font); padding: 15px 40px; font-size: 14px; border: none;
+            border-radius: 12px; cursor: pointer; transition: all 0.15s; position: relative;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-primary {
+            background: linear-gradient(180deg, var(--color-accent) 0%, #e6a817 100%); color: #1a1a2e;
+            box-shadow: 0 6px 0 #c49000, 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 9px 0 #c49000, 0 12px 25px rgba(0,0,0,0.4); }
+        .btn-primary:active { transform: translateY(3px); box-shadow: 0 3px 0 #c49000, 0 4px 10px rgba(0,0,0,0.3); }
+        .btn-secondary {
+            background: linear-gradient(180deg, var(--color-primary) 0%, #c73050 100%); color: white;
+            box-shadow: 0 6px 0 #a02040, 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .btn-secondary:hover { transform: translateY(-3px); box-shadow: 0 9px 0 #a02040, 0 12px 25px rgba(0,0,0,0.4); }
+        .btn-secondary:active { transform: translateY(3px); box-shadow: 0 3px 0 #a02040; }
+        .btn-small { padding: 10px 20px; font-size: 10px; }
+
+        .game-area { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; width: 100%; }
+        .level-badge {
+            background: var(--color-secondary); color: var(--color-accent); padding: 8px 20px;
+            border-radius: 20px; font-size: 11px; border: 2px solid var(--color-accent); margin-bottom: 20px;
+        }
+        .image-container {
+            width: 220px; height: 220px; background: linear-gradient(135deg, #16213e, #0f3460);
+            border: 4px solid var(--color-accent); border-radius: 20px; display: flex;
+            align-items: center; justify-content: center; margin-bottom: 25px; position: relative;
+            box-shadow: 0 0 30px rgba(245, 197, 66, 0.15); overflow: hidden;
+        }
+        .image-container img { max-width: 85%; max-height: 85%; object-fit: contain; transition: transform 0.3s; }
+        .image-container:hover img { transform: scale(1.05); }
+        .image-container .placeholder-icon { font-size: 80px; opacity: 0.7; }
+
+        .question { font-size: 14px; color: var(--color-white); margin-bottom: 25px; text-align: center; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; }
+        .option-btn {
+            font-family: var(--pixel-font); padding: 18px 15px; font-size: 16px;
+            background: linear-gradient(180deg, #2a2a4a 0%, #1a1a3a 100%); color: var(--color-white);
+            border: 3px solid #444; border-radius: 15px; cursor: pointer; transition: all 0.2s;
+            position: relative; overflow: hidden;
+        }
+        .option-btn:hover {
+            border-color: var(--color-accent); transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(245, 197, 66, 0.2);
+            background: linear-gradient(180deg, #3a3a5a 0%, #2a2a4a 100%);
+        }
+        .option-btn:active { transform: translateY(0); }
+        .option-btn.correct {
+            border-color: var(--color-success) !important;
+            background: linear-gradient(180deg, #2a6a4a 0%, #1a4a3a 100%) !important;
+            animation: correctPulse 0.5s ease; box-shadow: 0 0 25px rgba(78, 204, 163, 0.5);
+        }
+        .option-btn.wrong {
+            border-color: var(--color-primary) !important;
+            background: linear-gradient(180deg, #6a2a3a 0%, #4a1a2a 100%) !important;
+            animation: wrongShake 0.5s ease;
+        }
+        .option-btn.disabled { pointer-events: none; opacity: 0.5; }
+        @keyframes correctPulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+        @keyframes wrongShake {
+            0%, 100% { transform: translateX(0); } 20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); } 60% { transform: translateX(-10px); } 80% { transform: translateX(10px); }
+        }
+
+        .result-stars { display: flex; gap: 15px; margin: 20px 0; }
+        .result-star { font-size: 50px; animation: starPop 0.5s ease forwards; opacity: 0; }
+        .result-star:nth-child(1) { animation-delay: 0.2s; }
+        .result-star:nth-child(2) { animation-delay: 0.4s; }
+        .result-star:nth-child(3) { animation-delay: 0.6s; }
+        .result-star.earned { filter: drop-shadow(0 0 10px rgba(245, 197, 66, 0.8)); }
+        .result-star.empty { filter: grayscale(1) opacity(0.3); }
+        @keyframes starPop {
+            0% { opacity: 0; transform: scale(0) rotate(-180deg); }
+            60% { transform: scale(1.3) rotate(10deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        .result-message { font-size: 16px; color: var(--color-accent); margin: 15px 0 30px; text-align: center; }
+        .result-score { font-size: 12px; color: #aaa; margin-bottom: 25px; }
+        .btn-group { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+
+        .level-map { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; max-width: 500px; }
+        .level-node {
+            width: 100px; height: 100px; background: linear-gradient(135deg, #2a2a4a, #1a1a3a);
+            border: 3px solid #444; border-radius: 15px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; gap: 5px;
+        }
+        .level-node:hover:not(.locked) {
+            transform: translateY(-5px); border-color: var(--color-accent);
+            box-shadow: 0 8px 20px rgba(245, 197, 66, 0.2);
+        }
+        .level-node.locked { opacity: 0.4; cursor: not-allowed; }
+        .level-node.completed { border-color: var(--color-success); background: linear-gradient(135deg, #1a3a2a, #0a2a1a); }
+        .level-node.current {
+            border-color: var(--color-accent); background: linear-gradient(135deg, #3a3a2a, #2a2a1a);
+            animation: currentPulse 2s infinite;
+        }
+        @keyframes currentPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(245, 197, 66, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(245, 197, 66, 0.5); }
+        }
+        .level-node .level-num { font-size: 24px; color: var(--color-white); }
+        .level-node .level-stars { font-size: 14px; }
+        .level-node .lock-icon { font-size: 28px; }
+
+        .particles-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .particle { position: absolute; pointer-events: none; animation: particleFall 1.5s ease-out forwards; }
+        @keyframes particleFall {
+            0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+            100% { opacity: 0; transform: translateY(200px) rotate(720deg) scale(0); }
+        }
+        .confetti { position: absolute; width: 10px; height: 10px; animation: confettiFall 3s ease-out forwards; }
+        @keyframes confettiFall {
+            0% { opacity: 1; transform: translateY(-50px) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(600px) rotate(1080deg); }
+        }
+
+        @media (max-width: 600px) {
+            .game-title { font-size: 20px; }
+            .options-grid { grid-template-columns: 1fr; }
+            .option-btn { font-size: 14px; padding: 15px; }
+            .image-container { width: 160px; height: 160px; }
+            .hud { padding: 10px; }
+            .hud-item { font-size: 9px; }
+            .level-map { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .sound-toggle {
+            position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.3);
+            border: 2px solid #555; border-radius: 10px; padding: 8px 12px; cursor: pointer;
+            font-size: 18px; z-index: 100; transition: all 0.2s;
+        }
+        .sound-toggle:hover { border-color: var(--color-accent); }
+        .image-hint { font-size: 10px; color: #666; margin-top: 5px; font-style: italic; }
+
+        /* 🔤 MODO SÍLABAS Y VOCALES */
+        .word-display {
+            font-size: 34px; color: var(--color-accent); letter-spacing: 6px; margin: 15px 0 25px;
+            text-align: center; text-shadow: 2px 2px 0 var(--color-primary);
+            background: rgba(15, 52, 96, 0.7); padding: 18px 20px; border-radius: 15px;
+            border: 3px dashed var(--color-accent); line-height: 1.2;
+        }
+        .word-display .blank {
+            display: inline-block; width: 38px; height: 42px; border-bottom: 4px solid var(--color-success);
+            margin: 0 4px; vertical-align: middle; text-align: center; line-height: 38px;
+            color: var(--color-success); animation: blinkBlank 1.2s infinite;
+        }
+        @keyframes blinkBlank { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .syllable-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 450px; }
+        .syllable-btn {
+            font-size: 24px; padding: 18px;
+            background: linear-gradient(180deg, #3a2a5a 0%, #2a1a4a 100%); border-color: #7a5a9a;
+        }
+        .syllable-btn:hover {
+            border-color: var(--color-accent);
+            background: linear-gradient(180deg, #4a3a6a 0%, #3a2a5a 100%);
+        }
+    </style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div id="game-container">
+    <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">🔊</button>
+    <div class="hud" id="hud" style="display:none;">
+        <div class="hud-item"><span class="icon">⭐</span><span id="scoreDisplay">0</span></div>
+        <div class="hud-item"><span class="icon">📊</span><div class="xp-bar-container"><div class="xp-bar-fill" id="xpBar" style="width: 0%"></div></div></div>
+        <div class="hud-item"><span>Nivel</span><span id="levelDisplay">1</span></div>
+        <div class="hud-item"><div class="lives" id="livesDisplay">
+            <span class="heart" id="heart1">❤️</span><span class="heart" id="heart2">❤️</span><span class="heart" id="heart3">❤️</span>
+        </div></div>
+    </div>
+
+    <div class="screen active" id="screenMenu">
+        <div class="mascot">
+            <img src="images/mascot.png" alt="Mascota" onerror="this.style.display='none'; this.parentElement.innerHTML='🐱'; this.parentElement.style.fontSize='100px'; this.parentElement.style.display='flex'; this.parentElement.style.alignItems='center'; this.parentElement.style.justifyContent='center';">
+        </div>
+        <h1 class="game-title">AVENTURA DE<br>PALABRAS</h1>
+        <p class="game-subtitle">¡Aprende a leer jugando!</p>
+        <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
+            <button class="btn-game btn-primary" onclick="showScreen('screenLevels')">▶ JUGAR</button>
+            <button class="btn-game btn-secondary btn-small" onclick="showScreen('screenInstructions')">📖 ¿CÓMO JUGAR?</button>
+        </div>
+    </div>
+
+    <div class="screen" id="screenInstructions">
+        <!-- 1. El Título -->
+        <h2 style="color: var(--color-accent); font-size: 18px; margin-bottom: 20px;">
+            📖 ¿CÓMO JUGAR?
+        </h2>
+
+        <!-- 🆕 AQUÍ PEGA TU NUEVA IMAGEN -->
+<div style="margin: 20px 0 30px 0; text-align: center;">
+    <img src="images/tutorial.png" alt="Instrucciones" 
+         style="width: 50%; max-width: 420px; height: auto; border-radius: 15px; border: 4px solid var(--color-accent); box-shadow: 0 5px 20px rgba(0,0,0,0.5);">
+</div>
+        <!-- Fin de la imagen -->
+
+        <!-- 2. La lista de pasos (el texto que ya tienes) -->
+        <div style="color: #ccc; font-size: 11px; line-height: 2; text-align: left; max-width: 450px;">
+            <p>🔍 <strong style="color: var(--color-accent);">Mira</strong> la imagen con atención</p>
+            <p>📝 <strong style="color: var(--color-accent);">Lee</strong> las opciones</p>
+            <p>👆 <strong style="color: var(--color-accent);">Toca</strong> la respuesta correcta</p>
+            <p>⭐ <strong style="color: var(--color-accent);">Gana</strong> estrellas por cada acierto</p>
+            <p>❤️ <strong style="color: var(--color-accent);">Cuidado</strong> ¡tienes 3 vidas!</p>
+        </div>
+        
+        <button class="btn-game btn-primary" style="margin-top: 25px;" onclick="showScreen('screenMenu')">
+            ← VOLVER
+        </button>
+    </div>
+    <div class="screen" id="screenLevels">
+        <h2 style="color: var(--color-accent); font-size: 18px; margin-bottom: 5px;">🗺️ MAPA DE NIVELES</h2>
+        <p style="color: #888; font-size: 10px; margin-bottom: 20px;">Elige un nivel para comenzar</p>
+        <div class="level-map" id="levelMap"></div>
+        <button class="btn-game btn-secondary btn-small" style="margin-top: 15px;" onclick="showScreen('screenMenu')">← VOLVER</button>
+    </div>
+
+    <div class="screen" id="screenGame">
+        <div class="game-area">
+            <div class="level-badge" id="levelBadge">NIVEL 1</div>
+            <div class="image-container" id="imageContainer">
+                <span class="placeholder-icon" id="imagePlaceholder">❓</span>
+                <img id="gameImage" src="" alt="" style="display:none;" onerror="handleImageError(this)">
+            </div>
+            <p class="image-hint" id="imageHint"></p>
+            <p class="question" id="questionText">¿Cuál es esta palabra?</p>
+            <div class="word-display" id="wordDisplay" style="display:none;"></div>
+            <div class="options-grid" id="optionsGrid"></div>
+        </div>
+    </div>
+
+    <div class="screen" id="screenResult">
+        <h2 style="color: var(--color-accent); font-size: 20px;" id="resultTitle">¡NIVEL COMPLETADO!</h2>
+        <div class="result-stars" id="resultStars">
+            <span class="result-star">⭐</span><span class="result-star">⭐</span><span class="result-star">⭐</span>
+        </div>
+        <p class="result-message" id="resultMessage">¡Increíble!</p>
+        <p class="result-score" id="resultScore">Puntuación: 0</p>
+        <div class="btn-group">
+            <button class="btn-game btn-secondary btn-small" onclick="retryLevel()">🔄 REPETIR</button>
+            <button class="btn-game btn-primary" id="nextLevelBtn" onclick="nextLevel()">▶ SIGUIENTE</button>
+            <button class="btn-game btn-secondary btn-small" onclick="showScreen('screenLevels')">🗺️ NIVELES</button>
+        </div>
+    </div>
+
+    <div class="screen" id="screenGameOver">
+        <h2 style="color: var(--color-primary); font-size: 20px; margin-bottom: 15px;">💔 ¡GAME OVER!</h2>
+        <p style="color: #aaa; font-size: 11px; margin-bottom: 10px;">¡Inténtalo de nuevo!</p>
+        <p class="result-score" id="gameOverScore">Puntuación: 0</p>
+        <div style="display:flex; flex-direction:column; gap:15px; align-items:center; margin-top: 20px;">
+            <button class="btn-game btn-primary" onclick="retryLevel()">🔄 INTENTAR DE NUEVO</button>
+            <button class="btn-game btn-secondary btn-small" onclick="showScreen('screenLevels')">🗺️ NIVELES</button>
+        </div>
+    </div>
+    <div class="particles-container" id="particlesContainer"></div>
+</div>
+
+<!-- 🎵 MÚSICA DE FONDO -->
+<audio id="bgMusic" loop preload="auto" style="display:none;">
+    <source src="audio/atlasaudio-background-smooth-512254.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const IMAGE_PATH = 'images/';
+const LEVELS = [
+    // MUNDO 1: PALABRAS (1-10)
+    { id: 1, mode: "word", name: "Palabras Cortas", words: [
+        { image: "gato.png", fallbackEmoji: "🐱", word: "GATO" },
+        { image: "sol.png", fallbackEmoji: "☀️", word: "SOL" },
+        { image: "pan.png", fallbackEmoji: "🍞", word: "PAN" },
+        { image: "luz.png", fallbackEmoji: "💡", word: "LUZ" },
+        { image: "mar.png", fallbackEmoji: "🌊", word: "MAR" },
+        { image: "oso.png", fallbackEmoji: "🐻", word: "OSO" }
+    ]},
+    { id: 2, mode: "word", name: "Animales", words: [
+        { image: "perro.png", fallbackEmoji: "🐶", word: "PERRO" },
+        { image: "pato.png", fallbackEmoji: "🦆", word: "PATO" },
+        { image: "rana.png", fallbackEmoji: "🐸", word: "RANA" },
+        { image: "leon.png", fallbackEmoji: "🦁", word: "LEÓN" },
+        { image: "pez.png", fallbackEmoji: "🐟", word: "PEZ" },
+        { image: "vaca.png", fallbackEmoji: "🐄", word: "VACA" }
+    ]},
+    { id: 3, mode: "word", name: "Frutas", words: [
+        { image: "manzana.png", fallbackEmoji: "🍎", word: "MANZANA" },
+        { image: "pera.png", fallbackEmoji: "🍐", word: "PERA" },
+        { image: "uva.png", fallbackEmoji: "🍇", word: "UVA" },
+        { image: "platano.png", fallbackEmoji: "🍌", word: "PLÁTANO" },
+        { image: "limon.png", fallbackEmoji: "🍋", word: "LIMÓN" },
+        { image: "melon.png", fallbackEmoji: "🍈", word: "MELÓN" }
+    ]},
+    { id: 4, mode: "word", name: "Colores", words: [
+        { image: "rojo.png", fallbackEmoji: "🔴", word: "ROJO" },
+        { image: "azul.png", fallbackEmoji: "🔵", word: "AZUL" },
+        { image: "verde.png", fallbackEmoji: "🟢", word: "VERDE" },
+        { image: "rosa.png", fallbackEmoji: "🩷", word: "ROSA" },
+        { image: "gris.png", fallbackEmoji: "⚪", word: "GRIS" },
+        { image: "negro.png", fallbackEmoji: "⚫", word: "NEGRO" }
+    ]},
+    { id: 5, mode: "word", name: "Cuerpo", words: [
+        { image: "mano.png", fallbackEmoji: "✋", word: "MANO" },
+        { image: "boca.png", fallbackEmoji: "👄", word: "BOCA" },
+        { image: "ojo.png", fallbackEmoji: "👁️", word: "OJO" },
+        { image: "pie.png", fallbackEmoji: "🦶", word: "PIE" },
+        { image: "nariz.png", fallbackEmoji: "👃", word: "NARIZ" },
+        { image: "dedo.png", fallbackEmoji: "👆", word: "DEDO" }
+    ]},
+    { id: 6, mode: "word", name: "Naturaleza", words: [
+        { image: "arbol.png", fallbackEmoji: "🌳", word: "ÁRBOL" },
+        { image: "flor.png", fallbackEmoji: "🌸", word: "FLOR" },
+        { image: "luna.png", fallbackEmoji: "🌙", word: "LUNA" },
+        { image: "nube.png", fallbackEmoji: "☁️", word: "NUBE" },
+        { image: "rio.png", fallbackEmoji: "🏞️", word: "RÍO" },
+        { image: "estrella.png", fallbackEmoji: "⭐", word: "ESTRELLA" }
+    ]},
+    { id: 7, mode: "word", name: "Casa", words: [
+        { image: "mesa.png", fallbackEmoji: "🪑", word: "MESA" },
+        { image: "silla.png", fallbackEmoji: "💺", word: "SILLA" },
+        { image: "libro.png", fallbackEmoji: "📖", word: "LIBRO" },
+        { image: "reloj.png", fallbackEmoji: "⏰", word: "RELOJ" },
+        { image: "cama.png", fallbackEmoji: "🛏️", word: "CAMA" },
+        { image: "puerta.png", fallbackEmoji: "🚪", word: "PUERTA" }
+    ]},
+    { id: 8, mode: "word", name: "Transporte", words: [
+        { image: "auto.png", fallbackEmoji: "🚗", word: "AUTO" },
+        { image: "avion.png", fallbackEmoji: "✈️", word: "AVIÓN" },
+        { image: "barco.png", fallbackEmoji: "🚢", word: "BARCO" },
+        { image: "tren.png", fallbackEmoji: "🚂", word: "TREN" },
+        { image: "bici.png", fallbackEmoji: "🚲", word: "BICI" },
+        { image: "globo.png", fallbackEmoji: "🎈", word: "GLOBO" }
+    ]},
+    { id: 9, mode: "word", name: "Ropa", words: [
+        { image: "zapato.png", fallbackEmoji: "👟", word: "ZAPATO" },
+        { image: "sombrero.png", fallbackEmoji: "🎩", word: "SOMBRERO" },
+        { image: "falda.png", fallbackEmoji: "👗", word: "FALDA" },
+        { image: "guante.png", fallbackEmoji: "🧤", word: "GUANTE" },
+        { image: "corbata.png", fallbackEmoji: "👔", word: "CORBATA" },
+        { image: "bufanda.png", fallbackEmoji: "🧣", word: "BUFANDA" }
+    ]},
+    { id: 10, mode: "word", name: "Desafío Final", words: [
+        { image: "mariposa.png", fallbackEmoji: "🦋", word: "MARIPOSA" },
+        { image: "tortuga.png", fallbackEmoji: "🐢", word: "TORTUGA" },
+        { image: "elefante.png", fallbackEmoji: "🐘", word: "ELEFANTE" },
+        { image: "cocodrilo.png", fallbackEmoji: "🐊", word: "COCODRILO" },
+        { image: "jirafa.png", fallbackEmoji: "🦒", word: "JIRAFA" },
+        { image: "pinguino.png", fallbackEmoji: "🐧", word: "PINGÜINO" }
+    ]},
+    // MUNDO 2: SÍLABAS (11-20)
+    { id: 11, mode: "syllable", name: "Vocales Faltantes", words: [
+        { image: "gato.png", fallbackEmoji: "🐱", display: "G _ T O", correct: "A", options: ["E", "A", "I", "O"] },
+        { image: "mesa.png", fallbackEmoji: "🪑", display: "M _ S A", correct: "E", options: ["E", "A", "I", "U"] },
+        { image: "pino.png", fallbackEmoji: "🌲", display: "P _ N O", correct: "I", options: ["U", "O", "E", "I"] },
+        { image: "oso.png", fallbackEmoji: "🐻", display: "_ S O", correct: "O", options: ["U", "A", "O", "I"] },
+        { image: "uva.png", fallbackEmoji: "🍇", display: "_ V A", correct: "U", options: ["U", "I", "O", "E"] },
+        { image: "sol.png", fallbackEmoji: "☀️", display: "S _ L", correct: "O", options: ["U", "A", "E", "O"] }
+    ]},
+    { id: 12, mode: "syllable", name: "Sílabas CA-CO-CU", words: [
+        { image: "casa.png", fallbackEmoji: "🏠", display: "_ SA", correct: "CA", options: ["A", "CA", "MA", "LA"] },
+        { image: "coco.png", fallbackEmoji: "🥥", display: "_ CO", correct: "CO", options: ["PO", "TO", "CO", "SO"] },
+        { image: "cuna.png", fallbackEmoji: "🛏️", display: "_ NA", correct: "CU", options: ["LU", "MU", "RU", "CU"] },
+        { image: "cara.png", fallbackEmoji: "😊", display: "_ RA", correct: "CA", options: ["CA", "GA", "BA", "DA"] },
+        { image: "cola.png", fallbackEmoji: "🐾", display: "_ LA", correct: "CO", options: ["LO", "CO", "SO", "MO"] },
+        { image: "cubo.png", fallbackEmoji: "🎲", display: "_ BO", correct: "CU", options: ["RU", "PU", "CU", "LU"] }
+    ]},
+    { id: 13, mode: "syllable", name: "Sílabas PA-PE-PI", words: [
+        { image: "papa.png", fallbackEmoji: "🥔", display: "_ PA", correct: "PA", options: ["PA", "MA", "LA", "SA"] },
+        { image: "perro.png", fallbackEmoji: "🐶", display: "_ RRO", correct: "PE", options: ["ME", "PE", "TE", "LE"] },
+        { image: "pino.png", fallbackEmoji: "🌲", display: "_ NO", correct: "PI", options: ["MI", "PI", "TI", "LI"] },
+        { image: "polo.png", fallbackEmoji: "👕", display: "_ LO", correct: "PO", options: ["PO", "MO", "TO", "SO"] },
+        { image: "pulpo.png", fallbackEmoji: "🐙", display: "_ LPO", correct: "PU", options: ["PU", "MU", "TU", "SU"] },
+        { image: "pato.png", fallbackEmoji: "🦆", display: "_ TO", correct: "PA", options: ["PA", "MA", "TA", "SA"] }
+    ]},
+{ id: 14, mode: "syllable", name: "Sílabas con M y L", words: [
+    { image: "mano.png", fallbackEmoji: "✋", display: "_ NO", correct: "MA", options: ["PA", "MA", "SA", "TA"] },
+    { image: "mesa.png", fallbackEmoji: "🪑", display: "_ SA", correct: "ME", options: ["PE", "SE", "ME", "TE"] },
+    { image: "lima.png", fallbackEmoji: "🍋", display: "LI _ A", correct: "M", options: ["N", "S", "M", "P"] },
+    { image: "lupa.png", fallbackEmoji: "🔍", display: "LU _ A", correct: "P", options: ["S", "P", "M", "T"] },
+    { image: "mopa.png", fallbackEmoji: "🧹", display: "MO _ A", correct: "P", options: ["M", "T", "P", "S"] },
+    { image: "lomo.png", fallbackEmoji: "🦴", display: "LO _ O", correct: "M", options: ["T", "S", "M", "P"] }
+]},
+{ id: 15, mode: "syllable", name: "Sílabas con R y S", words: [
+    { image: "rosa.png", fallbackEmoji: "🌹", display: "_ SA", correct: "RO", options: ["LO", "RO", "TO", "MO"] },
+    { image: "sapo.png", fallbackEmoji: "🐸", display: "_ PO", correct: "SA", options: ["MA", "LA", "SA", "PA"] },
+    { image: "rana.png", fallbackEmoji: "🐸", display: "_ NA", correct: "RA", options: ["TA", "RA", "LA", "MA"] },
+    { image: "sol.png", fallbackEmoji: "☀️", display: "_ L", correct: "SO", options: ["MO", "TO", "SO", "LO"] },
+    { image: "risa.png", fallbackEmoji: "😄", display: "RI _ A", correct: "S", options: ["P", "T", "S", "M"] },
+    { image: "sopa.png", fallbackEmoji: "🥣", display: "SO _ A", correct: "P", options: ["M", "T", "P", "S"] }
+]},
+{ id: 16, mode: "syllable", name: "Palabras de 2 Sílabas", words: [
+    { image: "taza.png", fallbackEmoji: "☕", display: "TA _ A", correct: "Z", options: ["M", "Z", "L", "P"] },
+    { image: "dedo.png", fallbackEmoji: "👆", display: "DE _ O", correct: "D", options: ["B", "P", "D", "M"] },
+    { image: "nube.png", fallbackEmoji: "☁️", display: "NU _ E", correct: "B", options: ["P", "D", "B", "M"] },
+    { image: "bota.png", fallbackEmoji: "👢", display: "BO _ A", correct: "T", options: ["L", "T", "M", "S"] },
+    { image: "dado.png", fallbackEmoji: "🎲", display: "DA _ O", correct: "D", options: ["B", "M", "D", "P"] },
+    { image: "tubo.png", fallbackEmoji: "📏", display: "TU _ O", correct: "B", options: ["P", "M", "B", "D"] }
+]},
+{ id: 17, mode: "syllable", name: "Sílabas Trabadas", words: [
+    { image: "tren.png", fallbackEmoji: "🚂", display: "_ EN", correct: "TR", options: ["PR", "DR", "TR", "CR"] },
+    { image: "brillo.png", fallbackEmoji: "✨", display: "_ ILL O", correct: "BR", options: ["CR", "GR", "BR", "PR"] },
+    { image: "clavo.png", fallbackEmoji: "🔩", display: "_ AVO", correct: "CL", options: ["FL", "BL", "CL", "PL"] },
+    { image: "flor.png", fallbackEmoji: "🌸", display: "_ OR", correct: "FL", options: ["PL", "CL", "FL", "BL"] },
+    { image: "trigo.png", fallbackEmoji: "🌾", display: "_ IGO", correct: "TR", options: ["DR", "CR", "TR", "PR"] },
+    { image: "brazo.png", fallbackEmoji: "💪", display: "_ AZO", correct: "BR", options: ["GR", "PR", "BR", "CR"] }
+]},
+{ id: 18, mode: "syllable", name: "Palabras de 3 Sílabas", words: [
+    { image: "pelota.png", fallbackEmoji: "⚽", display: "PE _ O TA", correct: "L", options: ["M", "S", "L", "R"] },
+    { image: "camisa.png", fallbackEmoji: "👕", display: "CA _ I SA", correct: "M", options: ["N", "S", "M", "P"] },
+    { image: "zapato.png", fallbackEmoji: "👟", display: "ZA _ A TO", correct: "P", options: ["B", "T", "P", "M"] },
+    { image: "botella.png", fallbackEmoji: "🍼", display: "BO _ E LLA", correct: "T", options: ["P", "S", "T", "D"] },
+    { image: "caballo.png", fallbackEmoji: "🐎", display: "CA _ A LLO", correct: "B", options: ["D", "M", "B", "P"] },
+    { image: "mariposa.png", fallbackEmoji: "🦋", display: "MA _ I PO SA", correct: "R", options: ["L", "N", "R", "M"] }
+]},
+{ id: 19, mode: "syllable", name: "Sílabas Mixtas", words: [
+    { image: "globo.png", fallbackEmoji: "🎈", display: "GLO _ O", correct: "B", options: ["P", "D", "B", "M"] },
+    { image: "libro.png", fallbackEmoji: "📖", display: "LI _ RO", correct: "B", options: ["M", "B", "D", "P"] },
+    { image: "plato.png", fallbackEmoji: "🍽️", display: "PLA _ O", correct: "T", options: ["S", "L", "T", "P"] },
+    { image: "frutero.png", fallbackEmoji: "🍎", display: "FRU _ E RO", correct: "T", options: ["P", "S", "T", "D"] },
+    { image: "dragon.png", fallbackEmoji: "🐉", display: "DRA _ ÓN", correct: "G", options: ["K", "Q", "G", "J"] },
+    { image: "tigre.png", fallbackEmoji: "🐅", display: "TI _ RE", correct: "G", options: ["B", "M", "G", "D"] }
+]},
+{ id: 20, mode: "syllable", name: "¡Desafío Final Silábico!", words: [
+    { image: "elefante.png", fallbackEmoji: "🐘", display: "E LE _ AN TE", correct: "F", options: ["P", "V", "F", "B"] },
+    { image: "cocodrilo.png", fallbackEmoji: "🐊", display: "CO CO _ RI LO", correct: "D", options: ["B", "P", "D", "T"] },
+    { image: "mariposa.png", fallbackEmoji: "🦋", display: "MA RI _ O SA", correct: "P", options: ["M", "T", "P", "B"] },
+    { image: "tortuga.png", fallbackEmoji: "🐢", display: "TOR TU _ A", correct: "G", options: ["J", "C", "G", "Q"] },
+    { image: "pinguino.png", fallbackEmoji: "🐧", display: "PIN GUI _ O", correct: "N", options: ["M", "L", "N", "Ñ"] },
+    { image: "jirafa.png", fallbackEmoji: "🦒", display: "JI RA _ A", correct: "F", options: ["V", "P", "F", "B"] }
+]}
+];
+
+let gameState = {
+    currentLevel: 0, currentQuestion: 0, score: 0, lives: 3, maxLives: 3,
+    xp: 0, xpToNext: 100, levelProgress: {}, soundEnabled: true, isProcessing: false
+};
+
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+    if (!gameState.soundEnabled) return; initAudio();
+    const now = audioCtx.currentTime, osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    switch(type) {
+        case 'correct': osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now+0.1); osc.frequency.setValueAtTime(783.99, now+0.2); gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.4); osc.start(now); osc.stop(now+0.4); break;
+        case 'wrong': osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(200, now+0.15); gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.3); osc.start(now); osc.stop(now+0.3); break;
+        case 'click': osc.frequency.setValueAtTime(800, now); gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.1); osc.start(now); osc.stop(now+0.1); break;
+        case 'levelup': [523.25,587.33,659.25,783.99,880,1046.5].forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.setValueAtTime(f,now+i*0.12);g.gain.setValueAtTime(0.2,now+i*0.12);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.12+0.15);o.start(now+i*0.12);o.stop(now+i*0.12+0.15);}); break;
+        case 'gameover': [400,350,300,250,200].forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.setValueAtTime(f,now+i*0.2);g.gain.setValueAtTime(0.2,now+i*0.2);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.2+0.25);o.start(now+i*0.2);o.stop(now+i*0.2+0.25);}); break;
+    }
+}
+
+function toggleSound() {
+    gameState.soundEnabled = !gameState.soundEnabled;
+    document.getElementById('soundToggle').textContent = gameState.soundEnabled ? '🔊' : '🔇';
+    if (gameState.soundEnabled) playSound('click');
+}
+
+function createStars() {
+    const c = document.getElementById('stars');
+    for(let i=0;i<80;i++){const s=document.createElement('div');s.className='star';s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';const sz=Math.random()*3+1;s.style.width=sz+'px';s.style.height=sz+'px';s.style.animationDelay=Math.random()*2+'s';s.style.animationDuration=(Math.random()*2+1)+'s';c.appendChild(s);}
+}
+
+function showScreen(id) {
+    playSound('click');
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('hud').style.display = (id==='screenGame')?'flex':'none';
+    if(id==='screenLevels') renderLevelMap();
+    if(id==='screenGame') startLevel();
+}
+
+function renderLevelMap() {
+    const map = document.getElementById('levelMap'); map.innerHTML='';
+    LEVELS.forEach((lvl, idx) => {
+        const node = document.createElement('div'); node.className='level-node';
+        const prog = gameState.levelProgress[lvl.id], done = prog?.completed;
+        const unlocked = idx===0 || (gameState.levelProgress[LEVELS[idx-1].id]?.completed);
+        if(done){node.classList.add('completed');node.innerHTML=`<span class="level-num">${lvl.id}</span><span class="level-stars">${'⭐'.repeat(prog.stars)}${'☆'.repeat(3-prog.stars)}</span>`;}
+        else if(unlocked){node.classList.add('current');node.innerHTML=`<span class="level-num">${lvl.id}</span><span class="level-stars">▶</span>`;}
+        else{node.classList.add('locked');node.innerHTML=`<span class="lock-icon">🔒</span><span class="level-num" style="font-size:14px">${lvl.id}</span>`;}
+        if(unlocked) node.onclick = () => { gameState.currentLevel=idx; showScreen('screenGame'); };
+        map.appendChild(node);
+    });
+}
+
+function startLevel() {
+    const lvl = LEVELS[gameState.currentLevel];
+    gameState.currentQuestion = 0; gameState.lives = gameState.maxLives;
+    document.getElementById('levelBadge').textContent = `NIVEL ${lvl.id} - ${lvl.name}`;
+    document.getElementById('levelDisplay').textContent = lvl.id;
+    updateHUD(); loadQuestion();
+}
+
+function loadQuestion() {
+    const lvl = LEVELS[gameState.currentLevel];
+    if(gameState.currentQuestion >= lvl.words.length) { completeLevel(); return; }
+    const w = lvl.words[gameState.currentQuestion]; gameState.isProcessing=false;
+    const img = document.getElementById('gameImage'), ph = document.getElementById('imagePlaceholder');
+    img.src = IMAGE_PATH + w.image; img.style.display='none'; ph.textContent=w.fallbackEmoji; ph.style.display='block';
+    img.onload = () => { ph.style.display='none'; img.style.display='block'; };
+    img.onerror = () => { ph.style.display='block'; img.style.display='none'; };
+    document.getElementById('imageHint').textContent = `Imagen: ${w.image}`;
+    if(lvl.mode==='syllable'){
+        document.getElementById('questionText').textContent='Completa la palabra:';
+        document.getElementById('wordDisplay').style.display='block';
+        document.getElementById('wordDisplay').innerHTML = w.display.replace('_', '<span class="blank">_</span>');
+        renderSyllableOptions(w);
+    } else {
+        document.getElementById('questionText').textContent='¿Cuál es esta palabra?';
+        document.getElementById('wordDisplay').style.display='none';
+        renderWordOptions(w, lvl);
+    }
+    updateXPBar();
+}
+
+function generateOptions(word, lvl) {
+    let all = []; LEVELS.forEach(l => { if(l.id!==lvl.id) l.words.forEach(x => { if(x.word!==word.word) all.push(x.word); }); });
+    const shuffled = all.sort(()=>Math.random()-0.5), distr = shuffled.slice(0,3);
+    return [...distr, word.word].sort(()=>Math.random()-0.5);
+}
+
+function renderWordOptions(word, lvl) {
+    const opts = generateOptions(word, lvl), grid = document.getElementById('optionsGrid');
+    grid.className='options-grid'; grid.innerHTML='';
+    opts.forEach(opt => { const b=document.createElement('button'); b.className='option-btn'; b.textContent=opt; b.onclick=()=>handleAnswer(b,opt,word.word); grid.appendChild(b); });
+}
+
+function renderSyllableOptions(word) {
+    const grid = document.getElementById('optionsGrid'); grid.className='syllable-grid'; grid.innerHTML='';
+    word.options.forEach(opt => { const b=document.createElement('button'); b.className='option-btn syllable-btn'; b.textContent=opt; b.onclick=()=>handleAnswer(b,opt,word.correct); grid.appendChild(b); });
+}
+
+function handleAnswer(btn, sel, correct) {
+    if(gameState.isProcessing) return; gameState.isProcessing=true;
+    document.querySelectorAll('.option-btn').forEach(b=>b.classList.add('disabled'));
+    if(sel===correct){
+        btn.classList.add('correct'); gameState.score+=10; gameState.xp+=20; playSound('correct'); spawnParticles(btn,'⭐');
+        const lvl = LEVELS[gameState.currentLevel];
+        if(lvl.mode==='syllable'){ const d=document.getElementById('wordDisplay'); d.innerHTML = d.textContent.replace('_', correct); }
+        setTimeout(()=>{ gameState.currentQuestion++; updateHUD(); loadQuestion(); }, 1200);
+    } else {
+        btn.classList.add('wrong'); gameState.lives--; playSound('wrong');
+        const lvl = LEVELS[gameState.currentLevel];
+        if(lvl.mode==='word') document.querySelectorAll('.option-btn').forEach(b=>{ if(b.textContent===correct) b.classList.add('correct'); });
+        updateHUD();
+        if(gameState.lives<=0) setTimeout(gameOver,1500);
+        else setTimeout(()=>{ gameState.currentQuestion++; loadQuestion(); }, 1500);
+    }
+}
+
+function completeLevel() {
+    const lvl = LEVELS[gameState.currentLevel], acc = gameState.lives/gameState.maxLives;
+    let stars = acc>=1?3:(acc>=0.6?2:1);
+    if(!gameState.levelProgress[lvl.id] || gameState.levelProgress[lvl.id].stars<stars) gameState.levelProgress[lvl.id]={stars,completed:true};
+    playSound('levelup'); showScreen('screenResult');
+    document.getElementById('resultTitle').textContent='¡NIVEL COMPLETADO!';
+    document.getElementById('resultMessage').textContent = stars===3?'¡PERFECTO! 🎉':(stars===2?'¡Muy bien! 👏':'¡Buen trabajo! 💪');
+    document.getElementById('resultScore').textContent = `Puntuación: ${gameState.score}`;
+    document.querySelectorAll('#resultStars .result-star').forEach((s,i)=>{ s.className='result-star'; if(i<stars)s.classList.add('earned'); else s.classList.add('empty'); });
+    document.getElementById('nextLevelBtn').style.display = (gameState.currentLevel<LEVELS.length-1)?'inline-block':'none';
+    spawnConfetti();
+}
+
+function gameOver() { playSound('gameover'); showScreen('screenGameOver'); document.getElementById('gameOverScore').textContent=`Puntuación: ${gameState.score}`; }
+function nextLevel() { if(gameState.currentLevel<LEVELS.length-1){ gameState.currentLevel++; showScreen('screenGame'); } }
+function retryLevel() { showScreen('screenGame'); }
+
+function updateHUD() {
+    document.getElementById('scoreDisplay').textContent = gameState.score;
+    document.getElementById('levelDisplay').textContent = LEVELS[gameState.currentLevel].id;
+    for(let i=1;i<=gameState.maxLives;i++){ const h=document.getElementById('heart'+i); if(i>gameState.lives)h.classList.add('lost'); else h.classList.remove('lost'); }
+    updateXPBar();
+}
+function updateXPBar() { document.getElementById('xpBar').style.width = Math.min(100, (gameState.xp/gameState.xpToNext)*100) + '%'; }
+
+function spawnParticles(el, emoji) {
+    const c=document.getElementById('particlesContainer'), r=el.getBoundingClientRect(), g=document.getElementById('game-container').getBoundingClientRect();
+    for(let i=0;i<8;i++){ const p=document.createElement('div'); p.className='particle'; p.textContent=emoji; p.style.fontSize=(Math.random()*15+15)+'px'; p.style.left=(r.left-g.left+r.width/2+(Math.random()-0.5)*80)+'px'; p.style.top=(r.top-g.top+(Math.random()-0.5)*40)+'px'; p.style.animationDuration=(Math.random()+1)+'s'; c.appendChild(p); setTimeout(()=>p.remove(),2000); }
+}
+function spawnConfetti() {
+    const c=document.getElementById('particlesContainer'), cols=['#e94560','#f5c542','#4ecca3','#0f3460','#ff6b6b','#48dbfb'];
+    for(let i=0;i<40;i++){ const cf=document.createElement('div'); cf.className='confetti'; cf.style.left=Math.random()*100+'%'; cf.style.top='-10px'; cf.style.backgroundColor=cols[Math.floor(Math.random()*cols.length)]; cf.style.width=(Math.random()*10+5)+'px'; cf.style.height=(Math.random()*10+5)+'px'; cf.style.borderRadius=Math.random()>.5?'50%':'2px'; cf.style.animationDuration=(Math.random()*2+2)+'s'; cf.style.animationDelay=Math.random()+'s'; c.appendChild(cf); setTimeout(()=>cf.remove(),4000); }
+}
+function handleImageError(img){ img.style.display='none'; document.getElementById('imagePlaceholder').style.display='block'; }
+
+function init(){ createStars(); const saved=localStorage.getItem('aventuraPalabras'); if(saved){ const d=JSON.parse(saved); gameState.levelProgress=d.levelProgress||{}; gameState.score=d.totalScore||0; gameState.xp=d.totalXP||0; } }
+setInterval(()=>{ localStorage.setItem('aventuraPalabras', JSON.stringify({levelProgress:gameState.levelProgress,totalScore:gameState.score,totalXP:gameState.xp})); }, 5000);
+
+// Música de fondo
+(function(){
+    const bg = document.getElementById('bgMusic'); if(!bg) return;
+    bg.volume = 0.3; bg.muted = true;
+    document.addEventListener('click', function start(){ bg.muted=false; bg.play().catch(()=>{}); }, {once:true});
+    const orig = window.toggleSound; window.toggleSound = function(){ if(typeof orig==='function') orig(); bg.muted = !gameState.soundEnabled; };
+})();
+
+init();
+</script>
+</body>
+</html>
