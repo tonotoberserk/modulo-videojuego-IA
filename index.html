@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎮 Aventura de Palabras</title>
     <style>
+        html { font-size: clamp(14px, 1.8vw, 16px); }
+#game-container { width: min(900px, 96vw); height: auto; min-height: 600px; margin: auto; }
+
+@media (max-width: 768px) {
+    .game-area { padding: 15px; }
+    .image-container { width: 180px; height: 180px; }
+    .word-display { font-size: 24px; padding: 12px; }
+    .hud { flex-wrap: wrap; gap: 8px; }
+    .level-map { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+    .options-grid, .syllable-grid { grid-template-columns: 1fr; }
+    .image-container { width: 140px; height: 140px; }
+    .option-btn { font-size: 13px; padding: 12px; }
+    .game-title { font-size: 18px; }
+    .btn-game { padding: 10px 18px; font-size: 9px; }
+}
         /* ============================================
            🎨 ESTILOS GENERALES - ESTILO VIDEOJUEGO
            ============================================ */
@@ -22,15 +39,29 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 
-        body {
-            background: var(--color-bg);
-            font-family: var(--pixel-font);
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+/* ✅ FIX SCROLL + ELIMINA LÍNEAS BLANCAS */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    background: var(--color-bg) !important;
+}
+body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
+#game-container {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 600px !important;
+    width: min(900px, 96vw) !important;
+    margin: 20px auto !important;
+}
 
         .stars {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
